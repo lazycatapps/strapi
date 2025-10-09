@@ -98,15 +98,8 @@ install-lpk: ##@Deploy Install LPK package locally
 	lzc-cli app install "$$LPK_FILE"
 	@echo "Installation completed!"
 
-uninstall-lpk: ##@Deploy Uninstall LPK package
+uninstall: ##@Deploy Uninstall LPK package
 	@echo "Uninstalling package: $(PACKAGE_NAME)"
-	lzc-cli app uninstall $(PACKAGE_NAME)
-	@echo "Uninstall completed!"
-
-uninstall-clean: ##@Deploy Uninstall LPK package (note: data cleanup not supported by lzc-cli)
-	@echo "Uninstalling package: $(PACKAGE_NAME)"
-	@echo "Note: lzc-cli does not support automatic data cleanup"
-	@echo "Data will be preserved in /lzcapp/var and /lzcapp/cache"
 	lzc-cli app uninstall $(PACKAGE_NAME)
 	@echo "Uninstall completed!"
 

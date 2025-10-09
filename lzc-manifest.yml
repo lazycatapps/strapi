@@ -130,31 +130,67 @@ services:
     image: ##IMAGE_PLACEHOLDER##
     # image: docker-registry-ui.${LAZYCAT_BOX_NAME}.heiyu.space/strapi:latest
     setup_script: |
-      # Initialize config only once (never overwrite user modifications)
-      if [ ! -d /lzcapp/var/config ]; then
-        mkdir -p /lzcapp/var/config
-        cp -r /lzcapp/pkg/content/config/* /lzcapp/var/config/
+      set -e  # Exit immediately if a command exits with a non-zero status
+      set -u  # Treat unset variables as an error
+
+      CURRENT_VERSION="5.25.0"
+      VERSION_FILE="/backups/.strapi_version"
+
+      # Read installed version
+      INSTALLED_VERSION=""
+      if [ -f "$VERSION_FILE" ]; then
+        INSTALLED_VERSION=$(cat "$VERSION_FILE")
+        echo "Installed version: $INSTALLED_VERSION"
       fi
 
-      # Initialize src files only once (never overwrite user modifications)
-      mkdir -p /lzcapp/var/src
-
-      if [ ! -f /lzcapp/var/src/index.js ]; then
-        cp /lzcapp/pkg/content/src/index.js /lzcapp/var/src/
+      # Detect if this is a new installation or upgrade
+      IS_UPGRADE=false
+      if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "$CURRENT_VERSION" ]; then
+        IS_UPGRADE=true
+        echo "Upgrading from version $INSTALLED_VERSION to $CURRENT_VERSION"
       fi
 
-      if [ ! -d /lzcapp/var/src/admin ]; then
-        cp -r /lzcapp/pkg/content/src/admin /lzcapp/var/src/
+      # Handle config files
+      if [ "$IS_UPGRADE" = true ]; then
+        # Backup entire config directory
+        BACKUP_DIR="/backups/v$INSTALLED_VERSION"
+        mkdir -p "$BACKUP_DIR"
+        echo "Upgrading: Backing up to $BACKUP_DIR..."
+
+        # Backup config files
+        if [ -d "/app/config" ]; then
+          cp -r /app/config "$BACKUP_DIR/"
+          echo "  - Config files backed up"
+        fi
+
+        # Backup src files
+        if [ -d "/app/src" ]; then
+          cp -r /app/src "$BACKUP_DIR/"
+          echo "  - Source files backed up"
+        fi
+
+        echo "Backup complete! Old files backed up at: $BACKUP_DIR"
       fi
 
-      if [ ! -d /lzcapp/var/src/components ] && [ -d /lzcapp/pkg/content/src/components ]; then
-        cp -r /lzcapp/pkg/content/src/components /lzcapp/var/src/
+      # initialize config and src if they do not exist
+      cp -r /init/config/* /app/config/
+      cp /init/src/index.js /app/src/
+
+      if [ ! -d /app/src/admin ]; then
+        cp -r /init/src/admin /app/src/
       fi
 
       # Initialize api folder only once (preserve all user-created and modified content types)
-      if [ ! -d /lzcapp/var/src/api ]; then
-        cp -r /lzcapp/pkg/content/src/api /lzcapp/var/src/
+      if [ ! -d /app/src/api ]; then
+        cp -r /init/src/api /app/src/
       fi
+
+      if [ ! -d /app/src/components ] && [ -d /init/src/components ]; then
+        cp -r /init/src/components /app/src/
+      fi
+
+      # Save current version
+      echo "$CURRENT_VERSION" > "$VERSION_FILE"
     environment:
       - DATABASE_CLIENT=postgres
       - DATABASE_HOST=postgres
@@ -179,6 +215,7 @@ services:
       - /lzcapp/var/uploads:/app/public/uploads
       - /lzcapp/var/src:/app/src
       - /lzcapp/var/config:/app/config
+      - /lzcapp/var/backups:/backups
 
   postgres:
     image: registry.lazycat.cloud/liu/library/postgres:120a228424c55ea8
