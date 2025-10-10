@@ -1,7 +1,7 @@
 # app 的唯一 id,上架到商店需要保证不要冲突,尽量使用开发者自己的域名作为后缀.
 package: cloud.lazycat.app.liu.strapi
 # app 的版本
-version: 5.25.1
+version: 5.27.0
 
 name: Strapi
 keyword: strapi,cms,headless
@@ -133,7 +133,7 @@ services:
       set -e  # Exit immediately if a command exits with a non-zero status
       set -u  # Treat unset variables as an error
 
-      CURRENT_VERSION="5.25.1"
+      CURRENT_VERSION="5.27.0"
       VERSION_FILE="/backups/.strapi_version"
 
       # Read installed version
